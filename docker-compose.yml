@@ -1,15 +1,36 @@
 services:
+
   postgres:
     image: postgres:17
     container_name: deploymate-postgres
+
     environment:
       POSTGRES_DB: deploymate
       POSTGRES_USER: deploymate
       POSTGRES_PASSWORD: deploymate_dev
+
     ports:
       - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+
+  backend:
+    build:
+      context: ./backend
+
+    container_name: deploymate-backend
+
+    environment:
+      DATABASE_URL: postgresql://deploymate:deploymate_dev@postgres:5432/deploymate
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      - postgres
+
 
 volumes:
   postgres_data:

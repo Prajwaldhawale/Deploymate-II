@@ -1,4 +1,9 @@
 pipeline {
+
+    triggers {
+        githubPush()
+    }
+
     agent any
 
     stages {
@@ -34,6 +39,18 @@ pipeline {
             steps {
                 sh '''
                     python3 -m compileall backend/app
+                '''
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    echo "=== Building Backend Docker Image ==="
+
+                    docker build \
+                        -t deploymate-backend:ci \
+                        ./backend
                 '''
             }
         }

@@ -16,6 +16,13 @@ app = FastAPI(
 
 app.include_router(deployment_router)
 
+@app.get("/")
+def root():
+    return {
+        "service": "DeployMate-II API",
+        "status": "running",
+        "version": "0.1.0"
+    }
 
 @app.get("/health")
 def health_check():
