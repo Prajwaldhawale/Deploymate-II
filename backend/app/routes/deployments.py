@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 
 from ..database import SessionLocal
 from ..models.deployment import Deployment
+from ..models.user import User
 from ..schemas.deployment import DeploymentCreate, DeploymentResponse
+from ..security import get_current_user
 
 
 router = APIRouter(
@@ -28,9 +30,11 @@ def get_db():
 )
 def create_deployment(
     deployment: DeploymentCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     new_deployment = Deployment(
+        user_id=current_user.id,
         commit_hash=deployment.commit_hash,
         branch=deployment.branch,
         build_status=deployment.build_status,
@@ -50,10 +54,12 @@ def create_deployment(
     response_model=list[DeploymentResponse]
 )
 def get_deployments(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     return (
         db.query(Deployment)
+        .filter(Deployment.user_id == current_user.id)
         .order_by(Deployment.created_at.desc())
         .all()
     )
@@ -65,11 +71,15 @@ def get_deployments(
 )
 def get_deployment(
     deployment_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     deployment = (
         db.query(Deployment)
-        .filter(Deployment.id == deployment_id)
+        .filter(
+            Deployment.id == deployment_id,
+            Deployment.user_id == current_user.id
+        )
         .first()
     )
 
