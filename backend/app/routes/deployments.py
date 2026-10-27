@@ -6,6 +6,7 @@ from ..models.deployment import Deployment
 from ..models.user import User
 from ..schemas.deployment import DeploymentCreate, DeploymentResponse
 from ..security import get_current_user
+from ..services.risk_engine import assess_deployment_risk
 
 
 router = APIRouter(
@@ -33,13 +34,26 @@ def create_deployment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Calculate risk using the existing build and test results.
+    assessment = assess_deployment_risk(
+        build_status=deployment.build_status,
+        test_status=deployment.test_status
+    )
+
     new_deployment = Deployment(
         user_id=current_user.id,
         commit_hash=deployment.commit_hash,
         branch=deployment.branch,
         build_status=deployment.build_status,
         test_status=deployment.test_status,
-        deployment_status="PENDING"
+        decision=assessment["decision"],
+        risk_score=assessment["risk_score"],
+        ai_reasoning=" ".join(assessment["reasons"]),
+        deployment_status=(
+            "BLOCKED"
+            if assessment["decision"] == "BLOCK"
+            else "PENDING"
+        )
     )
 
     db.add(new_deployment)
