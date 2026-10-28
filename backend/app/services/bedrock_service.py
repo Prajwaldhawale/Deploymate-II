@@ -44,86 +44,82 @@ def analyze_assessment(evidence: dict[str, Any]) -> dict[str, Any]:
     decision. Missing credentials, configuration, or model access
     must not prevent deterministic risk assessment.
     """
-    model_id = os.getenv("BEDROCK_MODEL_ID")
+    model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-5-20250929-v1:0")
     region = os.getenv("AWS_REGION") or os.getenv(
         "AWS_DEFAULT_REGION", "us-east-1"
     )
 
-    if not model_id:
-        return {
-            "status": "unavailable",
-            "summary": (
-                "AI analysis is not configured. "
-                "The deterministic risk decision remains valid."
-            ),
-            "risk_factors": [],
-            "recommendations": [],
-            "missing_evidence": [],
-            "confidence": "LOW",
-        }
+    models_to_try = [model_id]
+    if model_id != "us.amazon.nova-lite-v1:0":
+        models_to_try.append("us.amazon.nova-lite-v1:0")
 
-    try:
-        client = boto3.client("bedrock-runtime", region_name=region)
+    for current_model in models_to_try:
+        try:
+            client = boto3.client("bedrock-runtime", region_name=region)
 
-        response = client.converse(
-            modelId=model_id,
-            system=[{"text": SYSTEM_PROMPT}],
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "text": (
-                                "Analyze this deployment evidence. "
-                                "Return only the requested JSON object.\n\n"
-                                + json.dumps(evidence, default=str)
-                            )
-                        }
-                    ],
-                }
-            ],
-            inferenceConfig={
-                "maxTokens": 1200,
-                "temperature": 0.2,
-            },
-        )
+            response = client.converse(
+                modelId=current_model,
+                system=[{"text": SYSTEM_PROMPT}],
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "text": (
+                                    "Analyze this deployment evidence. "
+                                    "Return only the requested JSON object.\n\n"
+                                    + json.dumps(evidence, default=str)
+                                )
+                            }
+                        ],
+                    }
+                ],
+                inferenceConfig={
+                    "maxTokens": 1200,
+                    "temperature": 0.2,
+                },
+            )
 
-        content = response["output"]["message"]["content"]
-        response_text = "\n".join(
-            item["text"] for item in content if "text" in item
-        )
+            content = response["output"]["message"]["content"]
+            response_text = "\n".join(
+                item["text"] for item in content if "text" in item
+            ).strip()
 
-        # Fail safely if the model does not return valid JSON.
-        result = json.loads(response_text)
+            # Clean markdown code fences if model enclosed JSON in them
+            if response_text.startswith("```"):
+                response_text = response_text.strip("`")
+                if response_text.startswith("json"):
+                    response_text = response_text[4:].strip()
 
-        required = {
-            "summary",
-            "risk_factors",
-            "recommendations",
-            "missing_evidence",
-            "confidence",
-        }
-        if not required.issubset(result):
-            raise ValueError("Bedrock response is missing required fields")
+            result = json.loads(response_text)
 
-        if not isinstance(result["summary"], str):
-            raise ValueError("Invalid AI summary")
-        for field in ("risk_factors", "recommendations", "missing_evidence"):
-            if not isinstance(result[field], list):
-                raise ValueError(f"Invalid AI field: {field}")
+            required = {
+                "summary",
+                "risk_factors",
+                "recommendations",
+                "missing_evidence",
+                "confidence",
+            }
+            if not required.issubset(result):
+                raise ValueError("Bedrock response is missing required fields")
 
-        confidence = str(result["confidence"]).upper()
-        if confidence not in {"LOW", "MEDIUM", "HIGH"}:
-            result["confidence"] = "LOW"
+            if not isinstance(result["summary"], str):
+                raise ValueError("Invalid AI summary")
+            for field in ("risk_factors", "recommendations", "missing_evidence"):
+                if not isinstance(result[field], list):
+                    raise ValueError(f"Invalid AI field: {field}")
 
-        result["status"] = "success"
-        return result
+            confidence = str(result["confidence"]).upper()
+            if confidence not in {"LOW", "MEDIUM", "HIGH"}:
+                result["confidence"] = "LOW"
 
-    except (BotoCoreError, ClientError):
-        # Do not log credentials or the submitted evidence.
-        logger.warning("Amazon Bedrock request failed", exc_info=True)
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
-        logger.warning("Bedrock returned an invalid response", exc_info=True)
+            result["status"] = "success"
+            return result
+
+        except (BotoCoreError, ClientError) as err:
+            logger.warning(f"Amazon Bedrock request failed for {current_model}: {err}")
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError) as err:
+            logger.warning(f"Bedrock returned an invalid response for {current_model}: {err}")
 
     return {
         "status": "unavailable",

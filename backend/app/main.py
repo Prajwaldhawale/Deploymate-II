@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from .database import Base, engine
-from .models import Deployment, User
+from .models import Assessment, Deployment, User
 from .routes.deployments import router as deployment_router
 from .routes.auth import router as auth_router
 from .routes.assessments import router as assessment_router

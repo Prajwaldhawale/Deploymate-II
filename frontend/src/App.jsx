@@ -52,6 +52,30 @@ function StatusBadge({ value }) {
   );
 }
 
+function VulnSummary({ findings }) {
+  if (!findings || typeof findings !== "object") {
+    return <span className="vuln-pill vuln-pill-clean">0 vulns</span>;
+  }
+
+  const crit = Number(findings.critical || 0);
+  const high = Number(findings.high || 0);
+  const med = Number(findings.medium || 0);
+  const low = Number(findings.low || 0);
+
+  if (crit === 0 && high === 0 && med === 0 && low === 0) {
+    return <span className="vuln-pill vuln-pill-clean">Clean (0)</span>;
+  }
+
+  return (
+    <div className="vuln-badges">
+      {crit > 0 && <span className="vuln-pill vuln-pill-crit">{crit} Crit</span>}
+      {high > 0 && <span className="vuln-pill vuln-pill-high">{high} High</span>}
+      {med > 0 && <span className="vuln-pill vuln-pill-med">{med} Med</span>}
+      {low > 0 && <span className="vuln-pill vuln-pill-low">{low} Low</span>}
+    </div>
+  );
+}
+
 function AuthScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -77,9 +101,7 @@ function AuthScreen({ onLogin }) {
         body: JSON.stringify({ email, password }),
       });
 
-      const token =
-        result.access_token ||
-        result.token;
+      const token = result.access_token || result.token;
 
       if (!token) {
         throw new Error("Login response did not contain an access token.");
@@ -109,8 +131,8 @@ function AuthScreen({ onLogin }) {
             you deploy.
           </h1>
           <p>
-            Assess deployment risks, understand failures, and make safer
-            release decisions.
+            Automated DevSecOps risk assessment powered by deterministic gates
+            and Amazon Bedrock AI.
           </p>
         </div>
 
@@ -213,7 +235,7 @@ function Brand() {
         <div className="brand-name">
           DeployMate<span>II</span>
         </div>
-        <div className="brand-caption">DEPLOYMENT RISK INTELLIGENCE</div>
+        <div className="brand-caption">AI DEVSECOPS RISK GATEWAY</div>
       </div>
     </div>
   );
@@ -233,13 +255,13 @@ function MetricCard({ label, value, detail, icon, tone }) {
   );
 }
 
-function DeploymentTable({ deployments, selectedId, onSelect }) {
-  if (deployments.length === 0) {
+function AssessmentTable({ assessments, selectedId, onSelect }) {
+  if (assessments.length === 0) {
     return (
       <div className="empty-state">
         <div className="empty-icon">↗</div>
-        <h3>No deployments yet</h3>
-        <p>Submit your first deployment to start assessing release risk.</p>
+        <h3>No assessments yet</h3>
+        <p>Trigger a pipeline assessment or click "New assessment" to evaluate risk.</p>
       </div>
     );
   }
@@ -249,42 +271,55 @@ function DeploymentTable({ deployments, selectedId, onSelect }) {
       <table className="deployment-table">
         <thead>
           <tr>
+            <th>PROJECT / ENV</th>
             <th>COMMIT / BRANCH</th>
             <th>BUILD</th>
             <th>TESTS</th>
+            <th>VULNERABILITIES</th>
             <th>RISK SCORE</th>
             <th>DECISION</th>
-            <th>CREATED</th>
+            <th>DATE</th>
           </tr>
         </thead>
 
         <tbody>
-          {deployments.map((deployment) => (
+          {assessments.map((item) => (
             <tr
-              key={deployment.id}
-              className={
-                selectedId === deployment.id ? "selected-row" : ""
-              }
-              onClick={() => onSelect(deployment)}
+              key={item.id}
+              className={selectedId === item.id ? "selected-row" : ""}
+              onClick={() => onSelect(item)}
             >
+              <td>
+                <div style={{ fontWeight: 600, color: "#e2e8f5" }}>
+                  {item.project_name || "demo-chat-app"}
+                </div>
+                <div style={{ fontSize: "10px", color: "#8a96ae" }}>
+                  {item.environment || "staging"}
+                </div>
+              </td>
+
               <td>
                 <div className="commit-cell">
                   <span className="commit-icon">⑂</span>
                   <div>
-                    <strong>{deployment.commit_hash}</strong>
+                    <strong>{item.commit_hash}</strong>
                     <span className="branch-name">
-                      {deployment.branch || "unknown"}
+                      {item.branch || "unknown"}
                     </span>
                   </div>
                 </div>
               </td>
 
               <td>
-                <StatusBadge value={deployment.build_status} />
+                <StatusBadge value={item.build_status} />
               </td>
 
               <td>
-                <StatusBadge value={deployment.test_status} />
+                <StatusBadge value={item.test_status} />
+              </td>
+
+              <td>
+                <VulnSummary findings={item.security_findings} />
               </td>
 
               <td>
@@ -292,29 +327,29 @@ function DeploymentTable({ deployments, selectedId, onSelect }) {
                   <div className="risk-track">
                     <div
                       className={`risk-fill ${
-                        Number(deployment.risk_score) >= 60
+                        Number(item.risk_score) >= 60
                           ? "risk-high"
-                          : Number(deployment.risk_score) >= 30
+                          : Number(item.risk_score) >= 30
                             ? "risk-medium"
                             : "risk-low"
                       }`}
                       style={{
                         width: `${Math.min(
                           100,
-                          Math.max(0, Number(deployment.risk_score) || 0)
+                          Math.max(0, Number(item.risk_score) || 0)
                         )}%`,
                       }}
                     />
                   </div>
-                  <strong>{deployment.risk_score ?? "—"}</strong>
+                  <strong>{item.risk_score ?? "—"}</strong>
                 </div>
               </td>
 
               <td>
-                <StatusBadge value={deployment.decision} />
+                <StatusBadge value={item.decision} />
               </td>
 
-              <td className="date-cell">{formatDate(deployment.created_at)}</td>
+              <td className="date-cell">{formatDate(item.created_at)}</td>
             </tr>
           ))}
         </tbody>
@@ -323,12 +358,64 @@ function DeploymentTable({ deployments, selectedId, onSelect }) {
   );
 }
 
-function NewDeploymentModal({ onClose, onSubmit, submitting }) {
-  const [commitHash, setCommitHash] = useState("");
+function AssessModal({ onClose, onSubmit, submitting }) {
+  const [projectName, setProjectName] = useState("demo-chat-app");
+  const [environment, setEnvironment] = useState("staging");
+  const [commitHash, setCommitHash] = useState("a1b2c3d");
   const [branch, setBranch] = useState("main");
   const [buildStatus, setBuildStatus] = useState("SUCCESS");
   const [testStatus, setTestStatus] = useState("PASS");
+
+  const [critVulns, setCritVulns] = useState(0);
+  const [highVulns, setHighVulns] = useState(0);
+  const [medVulns, setMedVulns] = useState(0);
+  const [lowVulns, setLowVulns] = useState(0);
+
+  const [cpuUsage, setCpuUsage] = useState(45);
+  const [memoryUsage, setMemoryUsage] = useState(55);
+  const [recentFailures, setRecentFailures] = useState(0);
+
   const [error, setError] = useState("");
+
+  function applyPreset(type) {
+    if (type === "safe") {
+      setCommitHash("f7a29c1");
+      setBranch("main");
+      setBuildStatus("SUCCESS");
+      setTestStatus("PASS");
+      setCritVulns(0);
+      setHighVulns(0);
+      setMedVulns(0);
+      setLowVulns(0);
+      setCpuUsage(42);
+      setMemoryUsage(50);
+      setRecentFailures(0);
+    } else if (type === "review") {
+      setCommitHash("b8e401f");
+      setBranch("feature/chat-v2");
+      setBuildStatus("SUCCESS");
+      setTestStatus("PASS");
+      setCritVulns(0);
+      setHighVulns(2);
+      setMedVulns(1);
+      setLowVulns(4);
+      setCpuUsage(88);
+      setMemoryUsage(86);
+      setRecentFailures(1);
+    } else if (type === "block") {
+      setCommitHash("d39c5aa");
+      setBranch("hotfix/auth-bypass");
+      setBuildStatus("SUCCESS");
+      setTestStatus("PASS");
+      setCritVulns(1);
+      setHighVulns(3);
+      setMedVulns(2);
+      setLowVulns(0);
+      setCpuUsage(96);
+      setMemoryUsage(92);
+      setRecentFailures(3);
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -336,10 +423,23 @@ function NewDeploymentModal({ onClose, onSubmit, submitting }) {
 
     try {
       await onSubmit({
+        project_name: projectName.trim(),
+        environment: environment.trim(),
         commit_hash: commitHash.trim(),
         branch: branch.trim(),
         build_status: buildStatus,
         test_status: testStatus,
+        security_findings: {
+          critical: Number(critVulns) || 0,
+          high: Number(highVulns) || 0,
+          medium: Number(medVulns) || 0,
+          low: Number(lowVulns) || 0,
+        },
+        infrastructure_metrics: {
+          cpu_usage_percent: Number(cpuUsage) || 0,
+          memory_usage_percent: Number(memoryUsage) || 0,
+        },
+        recent_failures: Number(recentFailures) || 0,
       });
     } catch (err) {
       setError(err.message);
@@ -354,12 +454,13 @@ function NewDeploymentModal({ onClose, onSubmit, submitting }) {
         aria-modal="true"
         aria-labelledby="modal-title"
         onMouseDown={(event) => event.stopPropagation()}
+        style={{ maxWidth: "560px" }}
       >
         <div className="modal-heading">
           <div>
-            <div className="eyebrow">RISK ASSESSMENT</div>
-            <h2 id="modal-title">Assess deployment</h2>
-            <p>Submit pipeline results for an automated risk decision.</p>
+            <div className="eyebrow">RISK ASSESSMENT ENGINE</div>
+            <h2 id="modal-title">Evaluate Pipeline Evidence</h2>
+            <p>Supply build, test, security, and infrastructure metrics for risk scoring.</p>
           </div>
 
           <button className="icon-button" onClick={onClose} aria-label="Close">
@@ -367,32 +468,86 @@ function NewDeploymentModal({ onClose, onSubmit, submitting }) {
           </button>
         </div>
 
-        <form className="deployment-form" onSubmit={handleSubmit}>
-          <label htmlFor="commit">Commit hash</label>
-          <input
-            id="commit"
-            value={commitHash}
-            onChange={(event) => setCommitHash(event.target.value)}
-            placeholder="e.g. a82fc1d"
-            required
-          />
+        <div className="preset-scenarios">
+          <span className="preset-label">DEMO PRESETS:</span>
+          <div className="preset-buttons">
+            <button
+              type="button"
+              className="preset-btn preset-safe"
+              onClick={() => applyPreset("safe")}
+            >
+              🟢 Safe Release (Approve)
+            </button>
+            <button
+              type="button"
+              className="preset-btn preset-review"
+              onClick={() => applyPreset("review")}
+            >
+              🟡 Elevated Risk (Review)
+            </button>
+            <button
+              type="button"
+              className="preset-btn preset-block"
+              onClick={() => applyPreset("block")}
+            >
+              🔴 Vulnerable (Block)
+            </button>
+          </div>
+        </div>
 
-          <label htmlFor="branch">Branch</label>
-          <input
-            id="branch"
-            value={branch}
-            onChange={(event) => setBranch(event.target.value)}
-            placeholder="main"
-            required
-          />
+        <form className="deployment-form" onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <div>
+              <label htmlFor="project">Project Name</label>
+              <input
+                id="project"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="environment">Environment</label>
+              <select
+                id="environment"
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value)}
+              >
+                <option value="staging">staging</option>
+                <option value="production">production</option>
+                <option value="development">development</option>
+              </select>
+            </div>
+          </div>
 
           <div className="form-grid">
             <div>
-              <label htmlFor="build-status">Build status</label>
+              <label htmlFor="commit">Commit Hash</label>
+              <input
+                id="commit"
+                value={commitHash}
+                onChange={(e) => setCommitHash(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="branch">Git Branch</label>
+              <input
+                id="branch"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div>
+              <label htmlFor="build-status">Build Status</label>
               <select
                 id="build-status"
                 value={buildStatus}
-                onChange={(event) => setBuildStatus(event.target.value)}
+                onChange={(e) => setBuildStatus(e.target.value)}
               >
                 <option value="SUCCESS">SUCCESS</option>
                 <option value="FAIL">FAIL</option>
@@ -400,11 +555,11 @@ function NewDeploymentModal({ onClose, onSubmit, submitting }) {
             </div>
 
             <div>
-              <label htmlFor="test-status">Test status</label>
+              <label htmlFor="test-status">Test Status</label>
               <select
                 id="test-status"
                 value={testStatus}
-                onChange={(event) => setTestStatus(event.target.value)}
+                onChange={(e) => setTestStatus(e.target.value)}
               >
                 <option value="PASS">PASS</option>
                 <option value="FAIL">FAIL</option>
@@ -412,9 +567,90 @@ function NewDeploymentModal({ onClose, onSubmit, submitting }) {
             </div>
           </div>
 
+          <div className="section-label-small">Security Findings (CVE / SAST)</div>
+          <div className="form-grid-4">
+            <div>
+              <label htmlFor="crit-v">Critical</label>
+              <input
+                id="crit-v"
+                type="number"
+                min="0"
+                value={critVulns}
+                onChange={(e) => setCritVulns(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="high-v">High</label>
+              <input
+                id="high-v"
+                type="number"
+                min="0"
+                value={highVulns}
+                onChange={(e) => setHighVulns(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="med-v">Medium</label>
+              <input
+                id="med-v"
+                type="number"
+                min="0"
+                value={medVulns}
+                onChange={(e) => setMedVulns(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="low-v">Low</label>
+              <input
+                id="low-v"
+                type="number"
+                min="0"
+                value={lowVulns}
+                onChange={(e) => setLowVulns(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="section-label-small">Infrastructure & Reliability</div>
+          <div className="form-grid-3">
+            <div>
+              <label htmlFor="cpu-v">CPU %</label>
+              <input
+                id="cpu-v"
+                type="number"
+                min="0"
+                max="100"
+                value={cpuUsage}
+                onChange={(e) => setCpuUsage(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="mem-v">Memory %</label>
+              <input
+                id="mem-v"
+                type="number"
+                min="0"
+                max="100"
+                value={memoryUsage}
+                onChange={(e) => setMemoryUsage(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="fail-v">Recent Fails</label>
+              <input
+                id="fail-v"
+                type="number"
+                min="0"
+                value={recentFailures}
+                onChange={(e) => setRecentFailures(e.target.value)}
+              />
+            </div>
+          </div>
+
           <div className="assessment-note">
             <span>✳</span>
-            The backend calculates the risk score and makes the final decision.
+            Deterministic engine computes the decision (APPROVE / REVIEW / BLOCK).
+            Amazon Bedrock generates advisory explanation.
           </div>
 
           {error && <div className="error-message">{error}</div>}
@@ -429,7 +665,7 @@ function NewDeploymentModal({ onClose, onSubmit, submitting }) {
             </button>
 
             <button className="primary-button" disabled={submitting}>
-              {submitting ? "Assessing..." : "Assess risk →"}
+              {submitting ? "Analyzing Risk..." : "Evaluate Release →"}
             </button>
           </div>
         </form>
@@ -438,23 +674,33 @@ function NewDeploymentModal({ onClose, onSubmit, submitting }) {
   );
 }
 
-function DetailPanel({ deployment, onClose }) {
-  if (!deployment) {
+function DetailPanel({ assessment, onClose }) {
+  if (!assessment) {
     return (
       <aside className="detail-panel detail-placeholder">
         <div className="detail-placeholder-icon">⌁</div>
-        <h3>Deployment details</h3>
-        <p>Select a deployment from the table to inspect its risk assessment.</p>
+        <h3>Assessment details</h3>
+        <p>Select a deployment from the table to inspect risk gates & AI recommendations.</p>
       </aside>
     );
   }
 
+  const findings = assessment.security_findings || {};
+  const metrics = assessment.infrastructure_metrics || {};
+  const reasons = Array.isArray(assessment.risk_reasons)
+    ? assessment.risk_reasons
+    : assessment.ai_reasoning
+      ? [assessment.ai_reasoning]
+      : [];
+
+  const isAiActive = assessment.ai_status === "success";
+
   return (
-    <aside className="detail-panel">
+    <aside className="detail-panel" style={{ width: "380px", flex: "0 0 380px" }}>
       <div className="detail-heading">
         <div>
-          <div className="eyebrow">ASSESSMENT DETAILS</div>
-          <h3>Deployment #{deployment.id}</h3>
+          <div className="eyebrow">ASSESSMENT #{assessment.id}</div>
+          <h3>{assessment.project_name || "demo-chat-app"}</h3>
         </div>
 
         <button
@@ -469,66 +715,129 @@ function DetailPanel({ deployment, onClose }) {
       <div className="detail-decision">
         <div>
           <span className="detail-label">Risk score</span>
-          <div className="detail-score">{deployment.risk_score ?? "—"}</div>
+          <div className="detail-score">{assessment.risk_score ?? "—"}</div>
           <span className="detail-muted">out of 100</span>
         </div>
 
-        <StatusBadge value={deployment.decision} />
+        <StatusBadge value={assessment.decision} />
       </div>
 
       <div className="detail-fields">
         <div>
-          <span>Commit</span>
-          <strong className="break-text">{deployment.commit_hash}</strong>
+          <span>Target Environment</span>
+          <strong style={{ textTransform: "uppercase", color: "#a8b6ff" }}>
+            {assessment.environment || "staging"}
+          </strong>
         </div>
 
         <div>
-          <span>Branch</span>
-          <strong>{deployment.branch}</strong>
+          <span>Commit & Branch</span>
+          <strong className="break-text">
+            {assessment.commit_hash} ({assessment.branch})
+          </strong>
         </div>
 
         <div>
-          <span>Build</span>
-          <StatusBadge value={deployment.build_status} />
+          <span>Build & Tests</span>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <StatusBadge value={assessment.build_status} />
+            <StatusBadge value={assessment.test_status} />
+          </div>
         </div>
 
         <div>
-          <span>Tests</span>
-          <StatusBadge value={deployment.test_status} />
+          <span>Security Findings</span>
+          <VulnSummary findings={findings} />
         </div>
 
         <div>
-          <span>Deployment status</span>
-          <StatusBadge value={deployment.deployment_status} />
+          <span>Host Metrics</span>
+          <strong>
+            CPU: {metrics.cpu_usage_percent ?? "—"}% · Mem:{" "}
+            {metrics.memory_usage_percent ?? "—"}%
+          </strong>
         </div>
 
         <div>
-          <span>Created</span>
-          <strong>{formatDate(deployment.created_at)}</strong>
+          <span>Assessed At</span>
+          <strong>{formatDate(assessment.created_at)}</strong>
         </div>
       </div>
 
-      <div className="reasoning-box">
-        <div className="reasoning-title">
-          <span>✳</span> Risk reasoning
+      {reasons.length > 0 && (
+        <div className="reasoning-box">
+          <div className="reasoning-title">
+            <span>⚖</span> Deterministic Policy Engine Rules
+          </div>
+          <ul className="reasons-list">
+            {reasons.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Amazon Bedrock AI Analysis Card */}
+      <div className="ai-card">
+        <div className="ai-card-header">
+          <div className="ai-card-title">
+            <span>✦</span> AI Risk Advisor
+          </div>
+
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <span
+              className={`ai-badge ${isAiActive ? "ai-badge-active" : "ai-badge-fallback"}`}
+            >
+              {isAiActive ? "Bedrock Active" : "Heuristic Mode"}
+            </span>
+            {assessment.ai_confidence && (
+              <span className="ai-confidence-pill">
+                {assessment.ai_confidence}
+              </span>
+            )}
+          </div>
         </div>
 
-        <p>
-          {deployment.ai_reasoning ||
-            "No additional reasoning was recorded for this assessment."}
+        <p className="ai-summary-text">
+          {assessment.ai_summary ||
+            "Deterministic rules applied. Configure Amazon Bedrock credentials to activate LLM reasoning."}
         </p>
+
+        {Array.isArray(assessment.ai_risk_factors) &&
+          assessment.ai_risk_factors.length > 0 && (
+            <div>
+              <div className="ai-subheading">Identified Risk Factors</div>
+              <ul className="ai-list">
+                {assessment.ai_risk_factors.map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+        {Array.isArray(assessment.ai_recommendations) &&
+          assessment.ai_recommendations.length > 0 && (
+            <div>
+              <div className="ai-subheading">Actionable Recommendations</div>
+              <ul className="ai-list">
+                {assessment.ai_recommendations.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
       </div>
 
       <div className="detail-disclaimer">
-        The risk decision is produced by the deterministic assessment engine.
-        AI-generated recommendations are not yet connected.
+        The deterministic risk engine owns the hard gate decision.
+        Bedrock AI explanations are advisory and ground on submitted pipeline evidence.
       </div>
     </aside>
   );
 }
 
 function Dashboard({ token, email, onLogout }) {
-  const [deployments, setDeployments] = useState([]);
+  const [assessments, setAssessments] = useState([]);
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -538,15 +847,22 @@ function Dashboard({ token, email, onLogout }) {
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
 
-  const loadDeployments = useCallback(async () => {
+  const loadAssessments = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      const result = await apiRequest("/deployments", {}, token);
-      setDeployments(Array.isArray(result) ? result : []);
+      // First try /assessments
+      let result = [];
+      try {
+        result = await apiRequest("/assessments", {}, token);
+      } catch (e) {
+        // Fallback to legacy /deployments if /assessments isn't populated
+        result = await apiRequest("/deployments", {}, token);
+      }
+      setAssessments(Array.isArray(result) ? result : []);
     } catch (err) {
-      setError(err.message || "Unable to load deployments.");
+      setError(err.message || "Unable to load assessment records.");
 
       if (
         err.message.toLowerCase().includes("token") ||
@@ -560,19 +876,19 @@ function Dashboard({ token, email, onLogout }) {
   }, [token, onLogout]);
 
   useEffect(() => {
-    loadDeployments();
-  }, [loadDeployments]);
+    loadAssessments();
+  }, [loadAssessments]);
 
   const metrics = useMemo(() => {
-    const approved = deployments.filter(
+    const approved = assessments.filter(
       (item) => normalizeDecision(item.decision) === "APPROVE"
     ).length;
 
-    const blocked = deployments.filter(
+    const blocked = assessments.filter(
       (item) => normalizeDecision(item.decision) === "BLOCK"
     ).length;
 
-    const scored = deployments.filter(
+    const scored = assessments.filter(
       (item) => Number.isFinite(Number(item.risk_score))
     );
 
@@ -584,36 +900,36 @@ function Dashboard({ token, email, onLogout }) {
       : 0;
 
     return {
-      total: deployments.length,
+      total: assessments.length,
       approved,
       blocked,
       averageRisk,
     };
-  }, [deployments]);
+  }, [assessments]);
 
-  const filteredDeployments = useMemo(() => {
-    return deployments.filter((item) => {
+  const filteredAssessments = useMemo(() => {
+    return assessments.filter((item) => {
       const decision = normalizeDecision(item.decision);
-
       const matchesFilter = filter === "ALL" || decision === filter;
 
       const term = search.trim().toLowerCase();
       const matchesSearch =
         !term ||
+        String(item.project_name || "").toLowerCase().includes(term) ||
         String(item.commit_hash || "").toLowerCase().includes(term) ||
         String(item.branch || "").toLowerCase().includes(term) ||
         String(item.id || "").includes(term);
 
       return matchesFilter && matchesSearch;
     });
-  }, [deployments, filter, search]);
+  }, [assessments, filter, search]);
 
-  async function createDeployment(payload) {
+  async function createAssessment(payload) {
     setSubmitting(true);
 
     try {
       const created = await apiRequest(
-        "/deployments",
+        "/assessments",
         {
           method: "POST",
           body: JSON.stringify(payload),
@@ -621,12 +937,12 @@ function Dashboard({ token, email, onLogout }) {
         token
       );
 
-      setDeployments((previous) => [created, ...previous]);
+      setAssessments((previous) => [created, ...previous]);
       setSelected(created);
       setShowModal(false);
-      setNotice(`Deployment assessed: ${created.decision}.`);
+      setNotice(`Assessment complete: Decision is ${created.decision} (Risk score: ${created.risk_score})`);
 
-      window.setTimeout(() => setNotice(""), 4000);
+      window.setTimeout(() => setNotice(""), 4500);
     } finally {
       setSubmitting(false);
     }
@@ -654,23 +970,31 @@ function Dashboard({ token, email, onLogout }) {
           onClick={() => {
             setFilter("ALL");
             document
-              .getElementById("deployment-history")
+              .getElementById("assessment-history")
               ?.scrollIntoView({ behavior: "smooth" });
           }}
         >
           <span className="nav-icon">⇄</span>
-          Deployments
+          Risk Assessments
         </button>
 
         <div className="sidebar-section-label sidebar-section-spaced">
-          SYSTEM
+          ENGINES
         </div>
 
         <div className="sidebar-info">
           <span className="connection-dot" />
           <div>
-            <strong>Risk engine</strong>
-            <span>API-connected</span>
+            <strong>Rule Gate Engine</strong>
+            <span>Active · 10 Rules</span>
+          </div>
+        </div>
+
+        <div className="sidebar-info" style={{ marginTop: "8px" }}>
+          <span className="connection-dot" style={{ background: "#7c8cff" }} />
+          <div>
+            <strong>Amazon Bedrock</strong>
+            <span>Claude 3 Sonnet / Titan</span>
           </div>
         </div>
 
@@ -681,7 +1005,7 @@ function Dashboard({ token, email, onLogout }) {
             </div>
             <div className="sidebar-user-text">
               <strong>{email}</strong>
-              <span>Authenticated user</span>
+              <span>Authenticated</span>
             </div>
           </div>
 
@@ -689,14 +1013,14 @@ function Dashboard({ token, email, onLogout }) {
             ↗ Sign out
           </button>
 
-          <div className="sidebar-version">DEPLOYMATE II · LOCAL DEVELOPMENT</div>
+          <div className="sidebar-version">DEPLOYMATE II · DEVSECOPS AGENT</div>
         </div>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
           <div className="breadcrumb">
-            Workspace <span>/</span> <strong>Overview</strong>
+            Workspace <span>/</span> <strong>Deployment Overview</strong>
           </div>
 
           <div className="topbar-right">
@@ -719,10 +1043,10 @@ function Dashboard({ token, email, onLogout }) {
           <section className="welcome-row">
             <div>
               <div className="eyebrow">DEPLOYMENT CONTROL CENTER</div>
-              <h1>Deployment overview</h1>
+              <h1>Release Risk Overview</h1>
               <p>
-                Monitor release health and make risk-aware deployment
-                decisions.
+                Evaluate CI/CD build, security scan, and host metrics through
+                deterministic risk gates and Amazon Bedrock advisory.
               </p>
             </div>
 
@@ -730,15 +1054,15 @@ function Dashboard({ token, email, onLogout }) {
               className="primary-button new-deployment-button"
               onClick={() => setShowModal(true)}
             >
-              <span>＋</span> New assessment
+              <span>＋</span> Evaluate Release
             </button>
           </section>
 
           {error && (
             <div className="alert-error">
-              <strong>Unable to load deployments</strong>
+              <strong>Unable to load assessments</strong>
               <span>{error}</span>
-              <button onClick={loadDeployments}>Retry</button>
+              <button onClick={loadAssessments}>Retry</button>
             </div>
           )}
 
@@ -746,9 +1070,9 @@ function Dashboard({ token, email, onLogout }) {
 
           <section className="metrics-grid">
             <MetricCard
-              label="TOTAL DEPLOYMENTS"
+              label="TOTAL ASSESSMENTS"
               value={loading ? "—" : metrics.total}
-              detail="Recorded assessments"
+              detail="Evaluated pipelines"
               icon="↗"
               tone="tone-blue"
             />
@@ -756,7 +1080,7 @@ function Dashboard({ token, email, onLogout }) {
             <MetricCard
               label="APPROVED"
               value={loading ? "—" : metrics.approved}
-              detail="Passed risk assessment"
+              detail="Safe release passed"
               icon="✓"
               tone="tone-green"
             />
@@ -764,30 +1088,30 @@ function Dashboard({ token, email, onLogout }) {
             <MetricCard
               label="BLOCKED"
               value={loading ? "—" : metrics.blocked}
-              detail="Require corrective action"
+              detail="Blocked by risk gate"
               icon="⊘"
               tone="tone-red"
             />
 
             <MetricCard
-              label="AVERAGE RISK"
+              label="AVG RISK SCORE"
               value={loading ? "—" : metrics.averageRisk}
-              detail="Risk score out of 100"
+              detail="Scale 0 to 100"
               icon="◈"
               tone="tone-purple"
             />
           </section>
 
-          <section className="history-section" id="deployment-history">
+          <section className="history-section" id="assessment-history">
             <div className="section-heading">
               <div>
-                <h2>Deployment history</h2>
-                <p>Your latest deployment assessments from the API.</p>
+                <h2>Assessment History</h2>
+                <p>Latest CI/CD evaluations and risk decisions.</p>
               </div>
 
               <button
                 className="secondary-button refresh-button"
-                onClick={loadDeployments}
+                onClick={loadAssessments}
                 disabled={loading}
               >
                 ↻ Refresh
@@ -798,15 +1122,15 @@ function Dashboard({ token, email, onLogout }) {
               <div className="search-box">
                 <span>⌕</span>
                 <input
-                  aria-label="Search deployments"
-                  placeholder="Search commit, branch, or ID..."
+                  aria-label="Search assessments"
+                  placeholder="Search project, commit, branch, or ID..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
 
               <select
-                aria-label="Filter deployments"
+                aria-label="Filter assessments"
                 className="filter-select"
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
@@ -821,11 +1145,11 @@ function Dashboard({ token, email, onLogout }) {
             {loading ? (
               <div className="loading-state">
                 <span className="loading-spinner" />
-                Loading deployment records...
+                Loading assessment records...
               </div>
             ) : (
-              <DeploymentTable
-                deployments={filteredDeployments}
+              <AssessmentTable
+                assessments={filteredAssessments}
                 selectedId={selected?.id}
                 onSelect={setSelected}
               />
@@ -833,8 +1157,8 @@ function Dashboard({ token, email, onLogout }) {
 
             <div className="table-footer">
               <span>
-                Showing {filteredDeployments.length} of {deployments.length}{" "}
-                deployments
+                Showing {filteredAssessments.length} of {assessments.length}{" "}
+                assessments
               </span>
               <span>
                 <span className="connection-dot" /> Live API data
@@ -844,29 +1168,30 @@ function Dashboard({ token, email, onLogout }) {
 
           <section className="bottom-grid">
             <div className="information-card">
-              <div className="info-icon">✳</div>
+              <div className="info-icon">⚖</div>
               <div>
-                <h3>Risk-based deployment decisions</h3>
+                <h3>Deterministic Risk Gates</h3>
                 <p>
-                  DeployMate evaluates build and test results before assigning
-                  an approval decision.
+                  Zero hallucinations in release decisions: build failure, test failure,
+                  or critical CVEs trigger non-negotiable blocks.
                 </p>
               </div>
             </div>
 
             <div className="information-card">
-              <div className="info-icon info-icon-purple">⌘</div>
+              <div className="info-icon info-icon-purple">✦</div>
               <div>
-                <h3>CI/CD integration</h3>
+                <h3>Amazon Bedrock Advisory</h3>
                 <p>
-                  Jenkins risk enforcement is the next integration milestone.
+                  Grounds strictly on pipeline logs and metrics to deliver executive summaries
+                  and actionable DevSecOps remediation.
                 </p>
               </div>
             </div>
           </section>
 
           <footer className="page-footer">
-            <span>DeployMate-II</span>
+            <span>DeployMate-II · DevSecOps AI Gateway</span>
             <span>Think before you deploy.</span>
           </footer>
         </div>
@@ -874,15 +1199,15 @@ function Dashboard({ token, email, onLogout }) {
 
       {selected && (
         <DetailPanel
-          deployment={selected}
+          assessment={selected}
           onClose={() => setSelected(null)}
         />
       )}
 
       {showModal && (
-        <NewDeploymentModal
+        <AssessModal
           onClose={() => setShowModal(false)}
-          onSubmit={createDeployment}
+          onSubmit={createAssessment}
           submitting={submitting}
         />
       )}

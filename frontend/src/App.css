@@ -1459,3 +1459,229 @@ select:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   DeployMate-II Assessment & AI Analysis Styles
+   ========================================================================== */
+
+.preset-scenarios {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #0d121c;
+  border: 1px solid #232c3f;
+  border-radius: 8px;
+}
+
+.preset-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #2d374d;
+  background: #141a27;
+  color: #cfd7e6;
+  transition: all 120ms ease;
+}
+
+.preset-btn:hover {
+  background: #1e2638;
+  border-color: #455273;
+}
+
+.preset-safe:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.preset-review:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.preset-block:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.section-label-small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #8c98b0;
+  margin: 12px 0 6px;
+  text-transform: uppercase;
+}
+
+.vuln-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vuln-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.vuln-pill-crit {
+  background: #3e1b23;
+  color: #ff7582;
+  border: 1px solid #6b2634;
+}
+
+.vuln-pill-high {
+  background: #3b2815;
+  color: #ffa552;
+  border: 1px solid #633f1a;
+}
+
+.vuln-pill-med {
+  background: #362e15;
+  color: #f0ca65;
+  border: 1px solid #5c4d1b;
+}
+
+.vuln-pill-low {
+  background: #152538;
+  color: #78abff;
+  border: 1px solid #20416b;
+}
+
+.vuln-pill-clean {
+  background: #15372e;
+  color: #5fe0aa;
+  border: 1px solid #245140;
+}
+
+/* AI Analysis Card in Detail Panel */
+.ai-card {
+  margin-top: 18px;
+  padding: 16px;
+  background: #131929;
+  border: 1px solid #2c3859;
+  border-radius: 10px;
+}
+
+.ai-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #232c45;
+}
+
+.ai-card-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 750;
+  color: #c7d2fe;
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 4px;
+}
+
+.ai-badge-active {
+  background: #15372e;
+  color: #5fe0aa;
+  border: 1px solid #245140;
+}
+
+.ai-badge-fallback {
+  background: #3a2e1c;
+  color: #f5c464;
+  border: 1px solid #5c4722;
+}
+
+.ai-summary-text {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #e2e8f5;
+  margin: 0 0 12px;
+}
+
+.ai-subheading {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.5px;
+  color: #9ba8c7;
+  text-transform: uppercase;
+  margin: 10px 0 5px;
+}
+
+.ai-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #b7c3dc;
+}
+
+.ai-list li {
+  margin-bottom: 4px;
+}
+
+.ai-confidence-pill {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #1f273d;
+  color: #93a4cb;
+  border: 1px solid #2d3957;
+}
+
+.reasons-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #ffb4b9;
+}
+
+.reasons-list li {
+  margin-bottom: 4px;
+}
