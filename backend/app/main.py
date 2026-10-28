@@ -5,6 +5,7 @@ from .database import Base, engine
 from .models import Deployment, User
 from .routes.deployments import router as deployment_router
 from .routes.auth import router as auth_router
+from .routes.assessments import router as assessment_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,6 +17,7 @@ app = FastAPI(
 
 app.include_router(deployment_router)
 app.include_router(auth_router)
+app.include_router(assessment_router)
 
 @app.get("/")
 def root():

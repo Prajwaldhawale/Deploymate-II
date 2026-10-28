@@ -17,4 +17,4 @@ typing_extensions==4.16.0
 uvicorn==0.52.1
 python-jose==3.5.0
 pwdlib==0.3.1
-email-validator==2.3.0
+email-validator==2.3.0boto3==1.43.120
