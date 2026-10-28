@@ -48,7 +48,7 @@ def create_deployment(
         test_status=deployment.test_status,
         decision=assessment["decision"],
         risk_score=assessment["risk_score"],
-        ai_reasoning=" ".join(assessment["reasons"]),
+        ai_reasoning=" ".join(assessment["reasons"]).strip(),
         deployment_status=(
             "BLOCKED"
             if assessment["decision"] == "BLOCK"
