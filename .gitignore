@@ -40,3 +40,6 @@ frontend/.vite/
 # Coverage
 .coverage
 htmlcov/
+
+# Local Demo Target Project (Never commit to deploymate-ii repo)
+FitPulse-AI/
