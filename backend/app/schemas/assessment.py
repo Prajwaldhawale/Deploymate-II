@@ -18,6 +18,11 @@ class AssessmentCreate(BaseModel):
     recent_failures: int = Field(default=0, ge=0, le=1000)
 
 
+class AssessmentOverrideRequest(BaseModel):
+    decision: Literal["APPROVED_BY_LEAD", "REJECTED_BY_LEAD"]
+    note: str | None = None
+
+
 class AssessmentResponse(BaseModel):
     id: int
     project_name: str

@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from ..database import SessionLocal
 from ..models.assessment import Assessment
 from ..models.user import User
-from ..schemas.assessment import AssessmentCreate, AssessmentResponse
+from ..schemas.assessment import (
+    AssessmentCreate,
+    AssessmentOverrideRequest,
+    AssessmentResponse,
+)
 from ..security import get_current_user
 from ..services.bedrock_service import analyze_assessment
 from ..services.risk_engine import assess_deployment_risk
@@ -125,3 +129,34 @@ def get_assessment(
         raise HTTPException(status_code=404, detail="Assessment not found")
 
     return record
+
+
+@router.post("/{assessment_id}/override", response_model=AssessmentResponse)
+def override_assessment_decision(
+    assessment_id: int,
+    payload: AssessmentOverrideRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = (
+        db.query(Assessment)
+        .filter(
+            Assessment.id == assessment_id,
+            Assessment.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if record is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+
+    record.decision = payload.decision
+    reasons = list(record.risk_reasons or [])
+    note = payload.note or f"Manual authorization executed by {current_user.email}"
+    reasons.append(f"Admin Decision: {payload.decision} ({note})")
+    record.risk_reasons = reasons
+
+    db.commit()
+    db.refresh(record)
+    return record
+

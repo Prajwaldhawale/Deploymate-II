@@ -43,11 +43,21 @@ function normalizeDecision(decision) {
 
 function StatusBadge({ value }) {
   const normalized = normalizeDecision(value);
+  let display = normalized;
+  let badgeClass = normalized.toLowerCase();
+
+  if (normalized === "APPROVED_BY_LEAD") {
+    display = "AUTHORIZED";
+    badgeClass = "approve";
+  } else if (normalized === "REJECTED_BY_LEAD") {
+    display = "REJECTED";
+    badgeClass = "block";
+  }
 
   return (
-    <span className={`badge badge-${normalized.toLowerCase()}`}>
+    <span className={`badge badge-${badgeClass}`}>
       <span className="badge-dot" />
-      {normalized}
+      {display}
     </span>
   );
 }
@@ -675,7 +685,7 @@ function AssessModal({ onClose, onSubmit, submitting }) {
   );
 }
 
-function DetailPanel({ assessment, onClose }) {
+function DetailPanel({ assessment, onClose, onOverride, overriding }) {
   if (!assessment) {
     return (
       <aside className="detail-panel detail-placeholder">
@@ -722,6 +732,33 @@ function DetailPanel({ assessment, onClose }) {
 
         <StatusBadge value={assessment.decision} />
       </div>
+
+      {assessment.decision === "REVIEW" && onOverride && (
+        <div className="manual-override-card">
+          <div className="manual-override-header">
+            <span className="manual-override-badge">AWAITING AUTHORIZATION</span>
+          </div>
+          <p className="manual-override-desc">
+            CI/CD pipeline is currently paused awaiting Lead authorization.
+          </p>
+          <div className="manual-override-actions">
+            <button
+              className="btn-authorize"
+              disabled={overriding}
+              onClick={() => onOverride(assessment.id, "APPROVED_BY_LEAD")}
+            >
+              {overriding ? "Processing..." : "✓ Authorize Release"}
+            </button>
+            <button
+              className="btn-reject"
+              disabled={overriding}
+              onClick={() => onOverride(assessment.id, "REJECTED_BY_LEAD")}
+            >
+              ✕ Reject
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="detail-fields">
         <div>
@@ -851,10 +888,41 @@ function Dashboard({ token, email, onLogout }) {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [overriding, setOverriding] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+
+  async function handleOverride(id, decision) {
+    setOverriding(true);
+    try {
+      const updated = await apiRequest(
+        `/assessments/${id}/override`,
+        {
+          method: "POST",
+          body: JSON.stringify({ decision }),
+        },
+        token
+      );
+
+      setAssessments((previous) =>
+        previous.map((item) => (item.id === id ? updated : item))
+      );
+      setSelected(updated);
+      setNotice(
+        `Assessment #${id} was ${
+          decision === "APPROVED_BY_LEAD" ? "AUTHORIZED" : "REJECTED"
+        } by Security Lead.`
+      );
+
+      window.setTimeout(() => setNotice(""), 5000);
+    } catch (err) {
+      setError(err.message || "Failed to submit authorization decision.");
+    } finally {
+      setOverriding(false);
+    }
+  }
 
   const loadAssessments = useCallback(async () => {
     setLoading(true);
@@ -1239,6 +1307,8 @@ function Dashboard({ token, email, onLogout }) {
         <DetailPanel
           assessment={selected}
           onClose={() => setSelected(null)}
+          onOverride={handleOverride}
+          overriding={overriding}
         />
       )}
 
