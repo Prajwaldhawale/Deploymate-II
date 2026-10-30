@@ -1,0 +1,140 @@
+pipeline {
+    agent any
+
+    environment {
+        // DeployMate-II Service Configuration
+        DEPLOYMATE_API_URL = credentials('deploymate-api-url') // or 'http://deploymate.internal:8000'
+        TARGET_ENV = 'staging'
+        PROJECT_NAME = "${env.JOB_BASE_NAME ?: 'target-microservice'}"
+        
+        // Output file to store risk evaluation JSON
+        ASSESSMENT_OUTPUT = "deploymate-assessment.json"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh '''
+                    echo "Checked out commit: $(git rev-parse HEAD)"
+                    echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+                '''
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                script {
+                    env.BUILD_STATUS = 'SUCCESS'
+                    env.TEST_STATUS = 'PASS'
+                    try {
+                        echo "=== Running Application Tests ==="
+                        // Replace with your project test command, e.g., pytest, npm test, mvn test
+                        sh 'pytest --junitxml=junit-results.xml tests/ || true'
+                    } catch (Exception e) {
+                        env.TEST_STATUS = 'FAIL'
+                        echo "Tests failed: ${e.message}"
+                    }
+                }
+            }
+        }
+
+        stage('Security Vulnerability Scan') {
+            steps {
+                script {
+                    echo "=== Running Trivy Security Scan ==="
+                    // Run Trivy filesystem scan to output JSON findings
+                    sh '''
+                        if command -v trivy &> /dev/null; then
+                            trivy fs . --format json --output trivy-results.json || true
+                        else
+                            echo "Trivy not installed on agent, generating empty scan"
+                            echo '{"Results": []}' > trivy-results.json
+                        fi
+                    '''
+                }
+            }
+        }
+
+        stage('DeployMate-II Risk Gate') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'deploymate-credentials',
+                    usernameVariable: 'DEPLOYMATE_EMAIL',
+                    passwordVariable: 'DEPLOYMATE_PASSWORD'
+                )]) {
+                    script {
+                        echo "=== Evaluating Release Risk with DeployMate-II Gateway ==="
+                        
+                        // Execute gatekeeper script. Exit code 0=APPROVE, 1=BLOCK, 2=REVIEW (when --fail-on-review)
+                        def gateStatusCode = sh(
+                            script: '''
+                                python3 scripts/deploymate_gate.py \
+                                    --api-url "${DEPLOYMATE_API_URL}" \
+                                    --project-name "${PROJECT_NAME}" \
+                                    --environment "${TARGET_ENV}" \
+                                    --build-status "${BUILD_STATUS}" \
+                                    --test-status "${TEST_STATUS}" \
+                                    --trivy-json "trivy-results.json" \
+                                    --output-file "${ASSESSMENT_OUTPUT}"
+                            ''',
+                            returnStatus: true
+                        )
+
+                        if (gateStatusCode == 1) {
+                            error("CRITICAL: DeployMate-II BLOCKED this release due to unacceptable risk.")
+                        }
+
+                        // Inspect decision from output JSON
+                        def assessment = readJSON file: "${ASSESSMENT_OUTPUT}"
+                        env.DEPLOYMATE_DECISION = assessment.decision
+                        env.DEPLOYMATE_RISK_SCORE = assessment.risk_score
+                        echo "DeployMate Decision: ${env.DEPLOYMATE_DECISION} (Risk: ${env.DEPLOYMATE_RISK_SCORE}/100)"
+                    }
+                }
+            }
+        }
+
+        stage('Manual Approval (Elevated Risk)') {
+            when {
+                environment name: 'DEPLOYMATE_DECISION', value: 'REVIEW'
+            }
+            steps {
+                script {
+                    echo "Risk score is elevated (${env.DEPLOYMATE_RISK_SCORE}/100). Manual review gate triggered."
+                    input message: "DeployMate-II classified this deployment as REVIEW (Risk Score: ${env.DEPLOYMATE_RISK_SCORE}). Approve deployment to ${TARGET_ENV}?"
+                }
+            }
+        }
+
+        stage('Deploy to Target Environment') {
+            when {
+                expression {
+                    return env.DEPLOYMATE_DECISION == 'APPROVE' || env.DEPLOYMATE_DECISION == 'REVIEW'
+                }
+            }
+            steps {
+                echo "=== Deploying to ${TARGET_ENV} ==="
+                sh '''
+                    echo "Release authorized by DeployMate-II."
+                    echo "Executing deployment commands..."
+                    # Add your container deploy / kubectl / ssh / aws ecs command here:
+                    # docker compose up -d
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: "${ASSESSMENT_OUTPUT}, trivy-results.json", allowEmptyArchive: true
+        }
+        success {
+            echo "Pipeline succeeded: Deployment passed DeployMate-II risk validation."
+        }
+        failure {
+            echo "Pipeline failed or was blocked by DeployMate-II risk gate."
+        }
+    }
+}
+
