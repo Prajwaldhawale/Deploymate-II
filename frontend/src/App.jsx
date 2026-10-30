@@ -124,15 +124,15 @@ function AuthScreen({ onLogin }) {
         <Brand />
 
         <div className="auth-heading">
-          <div className="eyebrow">DEPLOYMENT INTELLIGENCE</div>
+          <div className="eyebrow">CONTINUOUS DELIVERY GATEWAY</div>
           <h1>
-            Think before
+            Automated Release
             <br />
-            you deploy.
+            Risk Governance.
           </h1>
           <p>
-            Automated DevSecOps risk assessment powered by deterministic gates
-            and Amazon Bedrock AI.
+            Deterministic policy gates and advisory AWS Bedrock intelligence for
+            mission-critical cloud deployments.
           </p>
         </div>
 
@@ -210,32 +210,33 @@ function Brand() {
     <div className="brand">
       <div className="brand-icon">
         <svg
-          viewBox="0 0 32 32"
-          width="25"
-          height="25"
+          viewBox="0 0 28 28"
+          width="20"
+          height="20"
           fill="none"
           aria-hidden="true"
         >
           <path
-            d="M16 3 27 9.3v13.4L16 29 5 22.7V9.3L16 3Z"
+            d="M14 3.5L24 8.5V19.5L14 24.5L4 19.5V8.5L14 3.5Z"
             stroke="currentColor"
             strokeWidth="1.8"
-          />
-          <path
-            d="m11 16 3.2 3.2L21.5 12"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
             strokeLinejoin="round"
           />
+          <path
+            d="M14 8.5V19.5M8.5 14H19.5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <circle cx="14" cy="14" r="2.2" fill="#38bdf8" />
         </svg>
       </div>
 
       <div>
         <div className="brand-name">
-          DeployMate<span>II</span>
+          DeployMate<span className="brand-badge">II</span>
         </div>
-        <div className="brand-caption">AI DEVSECOPS RISK GATEWAY</div>
+        <div className="brand-caption">RELEASE GATEWAY & RISK AUDIT</div>
       </div>
     </div>
   );
@@ -469,28 +470,28 @@ function AssessModal({ onClose, onSubmit, submitting }) {
         </div>
 
         <div className="preset-scenarios">
-          <span className="preset-label">DEMO PRESETS:</span>
+          <span className="preset-label">SIMULATION SCENARIOS:</span>
           <div className="preset-buttons">
             <button
               type="button"
               className="preset-btn preset-safe"
               onClick={() => applyPreset("safe")}
             >
-              🟢 Safe Release (Approve)
+              <span className="preset-dot dot-green" /> Safe Baseline
             </button>
             <button
               type="button"
               className="preset-btn preset-review"
               onClick={() => applyPreset("review")}
             >
-              🟡 Elevated Risk (Review)
+              <span className="preset-dot dot-yellow" /> Elevated Risk
             </button>
             <button
               type="button"
               className="preset-btn preset-block"
               onClick={() => applyPreset("block")}
             >
-              🔴 Vulnerable (Block)
+              <span className="preset-dot dot-red" /> Critical Blocker
             </button>
           </div>
         </div>
@@ -767,7 +768,11 @@ function DetailPanel({ assessment, onClose }) {
       {reasons.length > 0 && (
         <div className="reasoning-box">
           <div className="reasoning-title">
-            <span>⚖</span> Deterministic Policy Engine Rules
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 2l6 3v5c0 4.5-3 8-6 9-3-1-6-4.5-6-9V5l6-3z"/>
+              <path d="M7.5 10l2 2 3.5-3.5"/>
+            </svg>
+            <span>Deterministic Policy Evaluation</span>
           </div>
           <ul className="reasons-list">
             {reasons.map((r, i) => (
@@ -781,7 +786,11 @@ function DetailPanel({ assessment, onClose }) {
       <div className="ai-card">
         <div className="ai-card-header">
           <div className="ai-card-title">
-            <span>✦</span> AI Risk Advisor
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="14" height="14" rx="2.5"/>
+              <path d="M7 10h6M10 7v6"/>
+            </svg>
+            <span>Bedrock Advisory Analysis</span>
           </div>
 
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
@@ -792,7 +801,7 @@ function DetailPanel({ assessment, onClose }) {
             </span>
             {assessment.ai_confidence && (
               <span className="ai-confidence-pill">
-                {assessment.ai_confidence}
+                Confidence: {assessment.ai_confidence}
               </span>
             )}
           </div>
@@ -960,7 +969,14 @@ function Dashboard({ token, email, onLogout }) {
         <div className="sidebar-section-label">WORKSPACE</div>
 
         <button className="nav-item nav-active">
-          <span className="nav-icon">▦</span>
+          <span className="nav-icon">
+            <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="6" height="6" rx="1.5"/>
+              <rect x="11" y="3" width="6" height="6" rx="1.5"/>
+              <rect x="3" y="11" width="6" height="6" rx="1.5"/>
+              <rect x="11" y="11" width="6" height="6" rx="1.5"/>
+            </svg>
+          </span>
           Overview
           <span className="nav-indicator" />
         </button>
@@ -974,27 +990,31 @@ function Dashboard({ token, email, onLogout }) {
               ?.scrollIntoView({ behavior: "smooth" });
           }}
         >
-          <span className="nav-icon">⇄</span>
+          <span className="nav-icon">
+            <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 6h12M4 10h12M4 14h8"/>
+            </svg>
+          </span>
           Risk Assessments
         </button>
 
         <div className="sidebar-section-label sidebar-section-spaced">
-          ENGINES
+          SECURITY ENGINES
         </div>
 
         <div className="sidebar-info">
           <span className="connection-dot" />
           <div>
             <strong>Rule Gate Engine</strong>
-            <span>Active · 10 Rules</span>
+            <span>Active · 10 Policy Gates</span>
           </div>
         </div>
 
         <div className="sidebar-info" style={{ marginTop: "8px" }}>
-          <span className="connection-dot" style={{ background: "#7c8cff" }} />
+          <span className="connection-dot" style={{ background: "#38bdf8" }} />
           <div>
             <strong>Amazon Bedrock</strong>
-            <span>Claude 3 Sonnet / Titan</span>
+            <span>Claude 3 Sonnet · Active</span>
           </div>
         </div>
 
@@ -1073,7 +1093,12 @@ function Dashboard({ token, email, onLogout }) {
               label="TOTAL ASSESSMENTS"
               value={loading ? "—" : metrics.total}
               detail="Evaluated pipelines"
-              icon="↗"
+              icon={
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="14" height="14" rx="2.5"/>
+                  <path d="M3 8.5h14M8.5 17V8.5"/>
+                </svg>
+              }
               tone="tone-blue"
             />
 
@@ -1081,7 +1106,11 @@ function Dashboard({ token, email, onLogout }) {
               label="APPROVED"
               value={loading ? "—" : metrics.approved}
               detail="Safe release passed"
-              icon="✓"
+              icon={
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 6.5L8.5 14L4 9.5"/>
+                </svg>
+              }
               tone="tone-green"
             />
 
@@ -1089,7 +1118,12 @@ function Dashboard({ token, email, onLogout }) {
               label="BLOCKED"
               value={loading ? "—" : metrics.blocked}
               detail="Blocked by risk gate"
-              icon="⊘"
+              icon={
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="10" cy="10" r="7"/>
+                  <path d="M5.5 5.5l9 9"/>
+                </svg>
+              }
               tone="tone-red"
             />
 
@@ -1097,7 +1131,11 @@ function Dashboard({ token, email, onLogout }) {
               label="AVG RISK SCORE"
               value={loading ? "—" : metrics.averageRisk}
               detail="Scale 0 to 100"
-              icon="◈"
+              icon={
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 3a7 7 0 1 0 7 7M10 7v3l2 2"/>
+                </svg>
+              }
               tone="tone-purple"
             />
           </section>
