@@ -733,7 +733,7 @@ function DetailPanel({ assessment, onClose, onOverride, overriding }) {
         <StatusBadge value={assessment.decision} />
       </div>
 
-      {assessment.decision === "REVIEW" && onOverride && (
+      {normalizeDecision(assessment.decision) === "REVIEW" && onOverride && (
         <div className="manual-override-card">
           <div className="manual-override-header">
             <span className="manual-override-badge">AWAITING AUTHORIZATION</span>
