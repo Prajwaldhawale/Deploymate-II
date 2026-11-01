@@ -80,9 +80,9 @@ def create_assessment(
     # Always retain deterministic, score-specific actions. Bedrock may add
     # package/CVE-level recommendations from scanner evidence, but cannot replace
     # the actions required by the gate.
-    recommendations = list(remediation_plan)
+    recommendations = list(remediation_plan[:3])
     for recommendation in ai["recommendations"]:
-        if recommendation not in recommendations:
+        if recommendation not in recommendations and len(recommendations) < 5:
             recommendations.append(recommendation)
 
     record = Assessment(

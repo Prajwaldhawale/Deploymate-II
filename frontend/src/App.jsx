@@ -705,9 +705,10 @@ function DetailPanel({ assessment, onClose, onOverride, overriding }) {
       : [];
 
   const isAiActive = assessment.ai_status === "success";
-  const scannerDetails = Array.isArray(findings.details)
-    ? findings.details
+  const nextMoves = Array.isArray(assessment.ai_recommendations)
+    ? assessment.ai_recommendations.slice(0, 3)
     : [];
+  const riskReductionNeeded = Math.max(0, Number(assessment.risk_score || 0) - 29);
 
   return (
     <aside className="detail-panel" style={{ width: "380px", flex: "0 0 380px" }}>
@@ -822,24 +823,27 @@ function DetailPanel({ assessment, onClose, onOverride, overriding }) {
         </div>
       )}
 
-      {scannerDetails.length > 0 && (
-        <div className="reasoning-box">
-          <div className="reasoning-title">
-            <span>Scanner Evidence Requiring Action</span>
+      {nextMoves.length > 0 && (
+        <section className="next-moves-card">
+          <div className="next-moves-heading">
+            <span>Recommended next moves</span>
+            {normalizeDecision(assessment.decision) !== "APPROVE" && (
+              <span className="risk-gap">Close {riskReductionNeeded}+ points</span>
+            )}
           </div>
-          <ul className="reasons-list">
-            {scannerDetails.map((finding, index) => (
-              <li key={`${finding.id || "finding"}-${index}`}>
-                <strong>{finding.severity || "Unknown"} · {finding.id || "Unidentified finding"}</strong>
-                {" — "}{finding.package || "Unknown package"}
-                {finding.installed_version ? ` ${finding.installed_version}` : ""}
-                {finding.fixed_version && finding.fixed_version !== "not provided"
-                  ? `; upgrade to ${finding.fixed_version} or later.`
-                  : "; no fixed version was supplied by the scanner; investigate mitigation or a supported replacement."}
+          <ol className="next-moves-list">
+            {nextMoves.map((move, index) => (
+              <li key={index}>
+                <span className="move-number">{index + 1}</span>
+                <span>{move}</span>
               </li>
             ))}
-          </ul>
-        </div>
+          </ol>
+          <p className="evidence-note">
+            Scanner evidence is retained with this assessment; the dashboard shows
+            only the highest-impact release actions.
+          </p>
+        </section>
       )}
 
       {/* Amazon Bedrock AI Analysis Card */}
@@ -877,24 +881,13 @@ function DetailPanel({ assessment, onClose, onOverride, overriding }) {
             <div>
               <div className="ai-subheading">Identified Risk Factors</div>
               <ul className="ai-list">
-                {assessment.ai_risk_factors.map((f, i) => (
+                {assessment.ai_risk_factors.slice(0, 3).map((f, i) => (
                   <li key={i}>{f}</li>
                 ))}
               </ul>
             </div>
           )}
 
-        {Array.isArray(assessment.ai_recommendations) &&
-          assessment.ai_recommendations.length > 0 && (
-            <div>
-              <div className="ai-subheading">Actionable Recommendations</div>
-              <ul className="ai-list">
-                {assessment.ai_recommendations.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </div>
-          )}
       </div>
 
       <div className="detail-disclaimer">

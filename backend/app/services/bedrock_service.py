@@ -8,6 +8,19 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 logger = logging.getLogger(__name__)
 
+MAX_ADVISORY_ITEMS = 3
+MAX_ADVISORY_ITEM_LENGTH = 360
+
+
+def _compact_items(items: list[Any]) -> list[str]:
+    """Keep advisory output useful in a release dashboard, not a log viewer."""
+    compacted = []
+    for item in items[:MAX_ADVISORY_ITEMS]:
+        text = " ".join(str(item).split())
+        if text:
+            compacted.append(text[:MAX_ADVISORY_ITEM_LENGTH].rstrip())
+    return compacted
+
 SYSTEM_PROMPT = """
 You are DeployMate-II, an expert DevSecOps deployment-risk analyst.
 
@@ -20,10 +33,13 @@ You must never change, override, or invent that decision.
 Your responsibilities:
 1. Explain the most important deployment risks and their concrete evidence.
 2. Explain why the supplied evidence matters.
-3. Recommend specific, actionable remediation steps. When scanner details include
-   a package, CVE ID, and fixed version, name all three and tell the user to
-   upgrade to that version (or later). When the details are absent, say that the
-   scan only supplied severity counts; do not invent a CVE, package, or fix.
+3. Recommend a concise, prioritized remediation plan. Return no more than three
+   recommendations and no more than three risk factors. Group related scanner
+   findings by package or base-image remediation; do not enumerate the raw scan.
+   When scanner details include a package, CVE ID, and fixed version, name only
+   the highest-impact examples and tell the user to upgrade to that version (or
+   later). When the details are absent, say that the scan only supplied severity
+   counts; do not invent a CVE, package, or fix.
 4. Identify missing evidence and uncertainty.
 5. Never invent vulnerabilities, metrics, logs, or test results.
 6. Do not claim a vulnerability exists unless the evidence supports it.
@@ -117,6 +133,11 @@ def analyze_assessment(evidence: dict[str, Any]) -> dict[str, Any]:
             confidence = str(result["confidence"]).upper()
             if confidence not in {"LOW", "MEDIUM", "HIGH"}:
                 result["confidence"] = "LOW"
+
+            result["risk_factors"] = _compact_items(result["risk_factors"])
+            result["recommendations"] = _compact_items(result["recommendations"])
+            result["missing_evidence"] = _compact_items(result["missing_evidence"])
+            result["summary"] = " ".join(result["summary"].split())[:600]
 
             result["status"] = "success"
             return result

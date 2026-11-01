@@ -991,6 +991,76 @@ select:focus-visible {
   margin-bottom: 4px;
 }
 
+/* Decision-focused remediation: concise actions rather than scanner output. */
+.next-moves-card {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.10), rgba(14, 165, 233, 0.05));
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.next-moves-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #fef3c7;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+}
+
+.risk-gap {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.13);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.next-moves-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.next-moves-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.move-number {
+  display: grid;
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border-radius: 50%;
+  color: #111827;
+  background: #fbbf24;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.evidence-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 /* --------------------------------------------------------------------------
    Bedrock Advisory Card
    -------------------------------------------------------------------------- */
