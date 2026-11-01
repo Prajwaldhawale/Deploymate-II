@@ -11,7 +11,7 @@ from ..schemas.assessment import (
 )
 from ..security import get_current_user
 from ..services.bedrock_service import analyze_assessment
-from ..services.risk_engine import assess_deployment_risk
+from ..services.risk_engine import assess_deployment_risk, build_remediation_plan
 
 router = APIRouter(prefix="/assessments", tags=["Assessments"])
 
@@ -47,6 +47,14 @@ def create_assessment(
         recent_failures=payload.recent_failures,
         infrastructure_metrics=payload.infrastructure_metrics,
     )
+    remediation_plan = build_remediation_plan(
+        risk,
+        payload.build_status,
+        payload.test_status,
+        findings,
+        payload.recent_failures,
+        payload.infrastructure_metrics,
+    )
 
     evidence = {
         "project_name": payload.project_name,
@@ -56,16 +64,26 @@ def create_assessment(
         "build_status": payload.build_status,
         "test_status": payload.test_status,
         "security_findings": findings,
+        "security_details": payload.security_details,
         "infrastructure_metrics": payload.infrastructure_metrics,
         "recent_failures": payload.recent_failures,
         "risk_score": risk["risk_score"],
         "decision": risk["decision"],
         "risk_reasons": risk["reasons"],
         "missing_evidence": risk["missing_evidence"],
+        "deterministic_remediation_plan": remediation_plan,
     }
 
     # The AI explains the assessment; it cannot change the decision.
     ai = analyze_assessment(evidence)
+
+    # Always retain deterministic, score-specific actions. Bedrock may add
+    # package/CVE-level recommendations from scanner evidence, but cannot replace
+    # the actions required by the gate.
+    recommendations = list(remediation_plan)
+    for recommendation in ai["recommendations"]:
+        if recommendation not in recommendations:
+            recommendations.append(recommendation)
 
     record = Assessment(
         user_id=current_user.id,
@@ -75,7 +93,7 @@ def create_assessment(
         environment=payload.environment,
         build_status=payload.build_status,
         test_status=payload.test_status,
-        security_findings=findings,
+        security_findings={**findings, "details": payload.security_details},
         infrastructure_metrics=payload.infrastructure_metrics,
         recent_failures=payload.recent_failures,
         risk_score=risk["risk_score"],
@@ -84,7 +102,7 @@ def create_assessment(
         ai_status=ai["status"],
         ai_summary=ai["summary"],
         ai_risk_factors=ai["risk_factors"],
-        ai_recommendations=ai["recommendations"],
+        ai_recommendations=recommendations,
         ai_missing_evidence=ai["missing_evidence"],
         ai_confidence=ai["confidence"],
     )

@@ -705,6 +705,9 @@ function DetailPanel({ assessment, onClose, onOverride, overriding }) {
       : [];
 
   const isAiActive = assessment.ai_status === "success";
+  const scannerDetails = Array.isArray(findings.details)
+    ? findings.details
+    : [];
 
   return (
     <aside className="detail-panel" style={{ width: "380px", flex: "0 0 380px" }}>
@@ -814,6 +817,26 @@ function DetailPanel({ assessment, onClose, onOverride, overriding }) {
           <ul className="reasons-list">
             {reasons.map((r, i) => (
               <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {scannerDetails.length > 0 && (
+        <div className="reasoning-box">
+          <div className="reasoning-title">
+            <span>Scanner Evidence Requiring Action</span>
+          </div>
+          <ul className="reasons-list">
+            {scannerDetails.map((finding, index) => (
+              <li key={`${finding.id || "finding"}-${index}`}>
+                <strong>{finding.severity || "Unknown"} · {finding.id || "Unidentified finding"}</strong>
+                {" — "}{finding.package || "Unknown package"}
+                {finding.installed_version ? ` ${finding.installed_version}` : ""}
+                {finding.fixed_version && finding.fixed_version !== "not provided"
+                  ? `; upgrade to ${finding.fixed_version} or later.`
+                  : "; no fixed version was supplied by the scanner; investigate mitigation or a supported replacement."}
+              </li>
             ))}
           </ul>
         </div>

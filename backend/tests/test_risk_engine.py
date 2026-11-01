@@ -1,4 +1,4 @@
-from app.services.risk_engine import assess_deployment_risk
+from app.services.risk_engine import assess_deployment_risk, build_remediation_plan
 
 
 def test_approve_when_all_pass():
@@ -65,3 +65,24 @@ def test_infrastructure_metrics_evaluation():
     assert result["risk_score"] == 25
     assert any("critically high" in r for r in result["reasons"])
     assert any("elevated" in r for r in result["reasons"])
+
+
+def test_remediation_plan_names_actions_and_score_threshold():
+    result = assess_deployment_risk(
+        build_status="SUCCESS",
+        test_status="PASS",
+        security_findings={"critical": 1, "high": 2, "medium": 0},
+        infrastructure_metrics={"cpu_usage_percent": 96},
+    )
+    plan = build_remediation_plan(
+        result,
+        "SUCCESS",
+        "PASS",
+        {"critical": 1, "high": 2, "medium": 0},
+        infrastructure_metrics={"cpu_usage_percent": 96},
+    )
+
+    assert "below 30" in plan[0]
+    assert any("all 1 critical" in action for action in plan)
+    assert any("2 high-severity" in action for action in plan)
+    assert any("CPU utilization from 96%" in action for action in plan)

@@ -90,6 +90,30 @@ def parse_trivy_report(file_path: str) -> Dict[str, int]:
     return counts
 
 
+def parse_trivy_details(file_path: str) -> list[Dict[str, str]]:
+    """Extract actionable package/CVE evidence for the AI advisor."""
+    if not os.path.exists(file_path):
+        return []
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        details = []
+        for result in data.get("Results", []):
+            for vuln in result.get("Vulnerabilities") or []:
+                details.append({
+                    "id": str(vuln.get("VulnerabilityID", "unknown")),
+                    "package": str(vuln.get("PkgName", "unknown")),
+                    "installed_version": str(vuln.get("InstalledVersion", "unknown")),
+                    "fixed_version": str(vuln.get("FixedVersion", "not provided")),
+                    "severity": str(vuln.get("Severity", "unknown")),
+                    "title": str(vuln.get("Title", "")),
+                })
+        return details[:100]
+    except Exception as exc:
+        print(f"[WARN] Failed to parse Trivy details ({file_path}): {exc}", file=sys.stderr)
+        return []
+
+
 def authenticate(api_url: str, email: str, password: str) -> str:
     """Authenticate with DeployMate-II to acquire a JWT token."""
     login_url = f"{api_url.rstrip('/')}/auth/login"
@@ -314,6 +338,9 @@ def main() -> int:
 
     if args.trivy_json:
         findings = parse_trivy_report(args.trivy_json)
+        security_details = parse_trivy_details(args.trivy_json)
+    else:
+        security_details = []
 
     if args.security_findings:
         try:
@@ -369,6 +396,7 @@ def main() -> int:
         "build_status": args.build_status,
         "test_status": args.test_status,
         "security_findings": findings,
+        "security_details": security_details,
         "infrastructure_metrics": infra_metrics,
         "recent_failures": args.recent_failures,
     }

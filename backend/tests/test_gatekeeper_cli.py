@@ -1,7 +1,12 @@
 import json
 import tempfile
 import pytest
-from scripts.deploymate_gate import parse_trivy_report, get_git_info, build_parser
+from scripts.deploymate_gate import (
+    parse_trivy_details,
+    parse_trivy_report,
+    get_git_info,
+    build_parser,
+)
 
 
 def test_parse_trivy_report():
@@ -64,6 +69,35 @@ def test_parse_trivy_report():
 def test_parse_trivy_report_missing_file():
     findings = parse_trivy_report("/non/existent/file.json")
     assert findings == {"critical": 0, "high": 0, "medium": 0, "low": 0}
+
+
+def test_parse_trivy_details_preserves_upgrade_evidence():
+    report = {
+        "Results": [{"Vulnerabilities": [{
+            "VulnerabilityID": "CVE-2026-1234",
+            "PkgName": "example-package",
+            "InstalledVersion": "1.0.0",
+            "FixedVersion": "1.0.1",
+            "Severity": "HIGH",
+            "Title": "Example vulnerability",
+        }]}]
+    }
+    with tempfile.NamedTemporaryFile("w+", suffix=".json", delete=False) as f:
+        json.dump(report, f)
+        temp_path = f.name
+    try:
+        assert parse_trivy_details(temp_path) == [{
+            "id": "CVE-2026-1234",
+            "package": "example-package",
+            "installed_version": "1.0.0",
+            "fixed_version": "1.0.1",
+            "severity": "HIGH",
+            "title": "Example vulnerability",
+        }]
+    finally:
+        import os
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 def test_get_git_info():

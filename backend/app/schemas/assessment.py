@@ -14,6 +14,10 @@ class AssessmentCreate(BaseModel):
     test_status: Literal["SUCCESS", "PASS", "FAILED", "FAIL", "ERROR"]
 
     security_findings: dict[str, int] = Field(default_factory=dict)
+    # Optional raw scanner evidence. Counts still drive the deterministic gate;
+    # these records give the advisor enough context to name the affected package
+    # and the available fixed version without inventing vulnerability details.
+    security_details: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
     infrastructure_metrics: dict[str, Any] = Field(default_factory=dict)
     recent_failures: int = Field(default=0, ge=0, le=1000)
 
